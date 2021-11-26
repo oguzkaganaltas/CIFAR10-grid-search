@@ -141,6 +141,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_set, batch_size=HP["batch_size"])
 
     results = []
+    
     best_model = None
     c= 0
     for m in range(len(HP["neurons"])):
