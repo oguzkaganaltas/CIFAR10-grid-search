@@ -8,7 +8,7 @@ from torch.utils.data import random_split, DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
 
 # Fix the randomness
 seed = 2385128
@@ -53,7 +53,7 @@ class MyModel(nn.Module):
 
 def fit(m,i,j,k):
     patience = HP["patience"]
-    prev_val_loss = np.inf
+    prev_val_acc = 0
     best_model_at_epoch = 0
     for epoch in range(HP["num_epoch"]):
         # Training
@@ -90,17 +90,19 @@ def fit(m,i,j,k):
 
         if(patience == 0):
             break
-        elif(val_loss > prev_val_loss):
+        elif(val_accuracy <= prev_val_acc):
             patience = patience - 1
         else:
             best_model_at_epoch = epoch
-            best_model = model
-            prev_val_loss = val_loss
+            save_dir = f"./best_models/neu{m}-hid{i}-lr{j}-act{k}"
+            os.makedirs(save_dir, exist_ok=True)
+            torch.save(model.state_dict(), f"{save_dir}-{round(val_accuracy,4)}.pth")
+
+            prev_val_acc = val_accuracy
             patience = HP["patience"]
         print(f'Train Loss = {train_loss:.4f}\tVal Loss = {val_loss:.4f}\tVal Accuracy: {val_accuracy:.4f}\tPatience: {patience}')
 
-    return [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k],best_model_at_epoch, train_loss,val_loss,val_accuracy
-],best_model
+    return [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k],best_model_at_epoch, train_loss,val_loss,val_accuracy]
 def test(_model):
     # Compute Test Accuracy
     _model.eval()
@@ -144,7 +146,6 @@ if __name__ == "__main__":
 
     results = []
     
-    best_model = None
     c= 0
     for m in range(len(HP["neurons"])):
         for i in range(len(HP["hidden_layers"])):
@@ -154,8 +155,8 @@ if __name__ == "__main__":
                     model = MyModel(10, hidden_layers=((np.array(HP["hidden_layers"][i])*HP["neurons"][m]).tolist()),activation=HP["activation_funcs"][k]).to(device)
                     loss_function = nn.CrossEntropyLoss()
                     optimizer = torch.optim.Adam(model.parameters(), lr=HP["lr"][j])
-                    a,best_model = fit(m,i,j,k)
-                    a.append(test(best_model))
+                    a = fit(m,i,j,k)
+                    a.append(test(best_model))#save edilen en iyi modeli alip onu test edecekijkm falan kullanarak adi yarat
                     print(a)
                     results.append(a)
                     c=c+1
