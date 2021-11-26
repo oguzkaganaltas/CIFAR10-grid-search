@@ -75,12 +75,15 @@ def fit(m,i,j,k):
         # Validation
         model.eval()
         accum_val_loss = 0
+        correct = total = 0
         with torch.no_grad():
             for x, (imgs, labels) in enumerate(val_loader, start=1):
                 imgs, labels = imgs.to(device), labels.to(device)
                 output = model(imgs)
                 accum_val_loss += loss_function(output, labels).item()
-        
+                correct += (torch.argmax(output, dim=1) == labels).sum()
+                total += labels.size(0) 
+        val_accuracy = 100* correct/total
         # print statistics of the epoch
         train_loss = accum_train_loss / n
         val_loss = accum_val_loss / x
@@ -94,11 +97,10 @@ def fit(m,i,j,k):
             best_model = model
             prev_val_loss = val_loss
             patience = HP["patience"]
-        print(f'Train Loss = {train_loss:.4f}\tVal Loss = {val_loss:.4f}\tPatience: {patience}')
+        print(f'Train Loss = {train_loss:.4f}\tVal Loss = {val_loss:.4f}\tVal Accuracy: {val_accuracy:.4f}\tPatience: {patience}')
 
-    return [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k],best_model_at_epoch, train_loss,val_loss],best_model
-
-
+    return [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k],best_model_at_epoch, train_loss,val_loss,val_accuracy
+],best_model
 def test(_model):
     # Compute Test Accuracy
     _model.eval()
@@ -136,9 +138,9 @@ if __name__ == "__main__":
     train_set, val_set = random_split(train_set, [train_set_length, val_set_length])
 
 
-    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True)
-    test_loader = DataLoader(test_set, batch_size=HP["batch_size"])
-    val_loader = DataLoader(val_set, batch_size=HP["batch_size"])
+    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True,num_workers=8)
+    test_loader = DataLoader(test_set, batch_size=HP["batch_size"],num_workers=8)
+    val_loader = DataLoader(val_set, batch_size=HP["batch_size"],num_workers=8)
 
     results = []
     
@@ -159,7 +161,7 @@ if __name__ == "__main__":
                     c=c+1
                 
     print(results)
-    fields= ["neurons","hidden_layers","lr","activation_funcs","best_epoch","train_loss","val_loss","test_accuracy"]
+    fields= ["neurons","hidden_layers","lr","activation_funcs","best_epoch","train_loss","val_loss","val_accuracy","test_accuracy"]
     import csv
     with open('RESULTS', 'w') as f:
         write = csv.writer(f)
