@@ -51,14 +51,16 @@ class MyModel(nn.Module):
         x = self.mods[-1](x)
         return x
 
-def fit(m,i,j,k):
+def fit(config):
+
     patience = HP["patience"]
-    prev_val_acc = 0
+    best_val_acc = 0
     best_model_at_epoch = 0
     for epoch in range(HP["num_epoch"]):
         # Training
         model.train()
         accum_train_loss = 0
+        train_correct = train_total = 0
         for n, (imgs, labels) in tqdm(enumerate(train_loader, start=1), total=len(train_loader), desc=f"Epoch: {epoch}"):
             imgs, labels = imgs.to(device), labels.to(device)
             output = model(imgs)
@@ -66,6 +68,10 @@ def fit(m,i,j,k):
 
             # accumlate the loss
             accum_train_loss += loss.item()
+
+            #train accuracy
+            train_correct += (torch.argmax(output, dim=1) == labels).sum()
+            train_total += labels.size(0) 
 
             # backpropagation
             optimizer.zero_grad()
@@ -75,49 +81,63 @@ def fit(m,i,j,k):
         # Validation
         model.eval()
         accum_val_loss = 0
-        correct = total = 0
+        val_correct = val_total = 0
         with torch.no_grad():
             for x, (imgs, labels) in enumerate(val_loader, start=1):
                 imgs, labels = imgs.to(device), labels.to(device)
                 output = model(imgs)
+                
+                #accumlate the loss
                 accum_val_loss += loss_function(output, labels).item()
-                correct += (torch.argmax(output, dim=1) == labels).sum()
-                total += labels.size(0) 
-        val_accuracy = 100* correct/total
-        # print statistics of the epoch
+                
+                #validation accuracy
+                val_correct += (torch.argmax(output, dim=1) == labels).sum()
+                val_total += labels.size(0) 
+
+        val_accuracy = 100 * val_correct / val_total
+        train_accuracy = 100 * train_correct / train_total
+
         train_loss = accum_train_loss / n
         val_loss = accum_val_loss / x
 
         if(patience == 0):
             break
-        elif(val_accuracy <= prev_val_acc):
+        elif(val_accuracy <= best_val_acc):
             patience = patience - 1
         else:
             best_model_at_epoch = epoch
-            save_dir = f"./best_models/neu{m}-hid{i}-lr{j}-act{k}"
+            best_val_acc = val_accuracy
+
+            save_dir = f"./best_models/"
             os.makedirs(save_dir, exist_ok=True)
-            torch.save(model.state_dict(), f"{save_dir}-{round(val_accuracy,4)}.pth")
-
-            prev_val_acc = val_accuracy
+            torch.save(model.state_dict(), f"{save_dir}/model-{config}.pth")
             patience = HP["patience"]
-        print(f'Train Loss = {train_loss:.4f}\tVal Loss = {val_loss:.4f}\tVal Accuracy: {val_accuracy:.4f}\tPatience: {patience}')
 
-    return [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k],best_model_at_epoch, train_loss,val_loss,val_accuracy]
+        print(f'Train Loss = {train_loss:.4f}\tTrain Accuracy = {train_accuracy:.4f}\tVal Loss = {val_loss:.4f}\tVal Accuracy: {val_accuracy:.4f}\tPatience: {patience}')
+
+    return train_loss, train_accuracy, val_loss, val_accuracy, best_model_at_epoch
+
 def test(_model):
     # Compute Test Accuracy
+    accum_test_loss = 0
     _model.eval()
     with torch.no_grad():
-        correct = total = 0
+        correct = total = x = 0
         for images, labels in tqdm(test_loader,total=len(test_loader), desc=f"Test: "):
             images, labels = images.to(device), labels.to(device)
             output = _model(images)
             
+            accum_test_loss += loss_function(output, labels).item()
+
             _, predicted_labels = torch.max(output, 1)
             correct += (predicted_labels == labels).sum()
             total += labels.size(0)
+            x+=1
 
-    print(f'Test Accuracy = {100 * correct/total :.3f}%')
-    return 100 * correct/total
+        test_loss = accum_test_loss / x
+        test_accuracy = 100 * correct/total
+    print(f'Test Loss= {test_loss:.4f}\tTest Accuracy = {test_accuracy:.4f}%')
+    return test_loss, test_accuracy
 
 
 if __name__ == "__main__":
@@ -152,19 +172,24 @@ if __name__ == "__main__":
             for j in range(len(HP["lr"])):
                 for k in range(len(HP["activation_funcs"])):
                     print(f"----- Model: {c} -----")
+
                     model = MyModel(10, hidden_layers=((np.array(HP["hidden_layers"][i])*HP["neurons"][m]).tolist()),activation=HP["activation_funcs"][k]).to(device)
                     loss_function = nn.CrossEntropyLoss()
                     optimizer = torch.optim.Adam(model.parameters(), lr=HP["lr"][j])
-                    a = fit(m,i,j,k)
-                    a.append(test(best_model))#save edilen en iyi modeli alip onu test edecekijkm falan kullanarak adi yarat
-                    print(a)
-                    results.append(a)
+
+                    train_loss, train_accuracy, val_loss, val_accuracy, num_epoch = fit(c)
+                    
+                    results = results + [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k]] + [train_loss, train_accuracy, val_loss, val_accuracy, num_epoch]
+                    PATH = f"./best_models/model-{c}.pth"
+                    model.load_state_dict(torch.load(PATH))
+                    results.append(test(model))
+                    print(results)
                     c=c+1
                 
     print(results)
-    fields= ["neurons","hidden_layers","lr","activation_funcs","best_epoch","train_loss","val_loss","val_accuracy","test_accuracy"]
+    fields= ["neurons","hidden_layers","lr","activation_funcs","train_loss","train_accuracy","val_loss","val_accuracy","num_epoch","test_loss","test_accuracy"]
     import csv
-    with open('RESULTS', 'w') as f:
+    with open('RESULTStest', 'w') as f:
         write = csv.writer(f)
         write.writerow(fields)
         write.writerows(results)
