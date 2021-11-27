@@ -1,0 +1,1 @@
+neurons,hidden_layers,lr,activation_funcs,train_loss,train_accuracy,val_loss,val_accuracy,num_epoch,test_loss,test_accuracy

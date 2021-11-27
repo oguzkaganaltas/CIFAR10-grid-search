@@ -160,9 +160,9 @@ if __name__ == "__main__":
     train_set, val_set = random_split(train_set, [train_set_length, val_set_length])
 
 
-    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True,num_workers=8)
-    test_loader = DataLoader(test_set, batch_size=HP["batch_size"],num_workers=8)
-    val_loader = DataLoader(val_set, batch_size=HP["batch_size"],num_workers=8)
+    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=HP["batch_size"])
+    val_loader = DataLoader(val_set, batch_size=HP["batch_size"])
 
     results = []
     
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                     loss_function = nn.CrossEntropyLoss()
                     optimizer = torch.optim.Adam(model.parameters(), lr=HP["lr"][j])
 
-                    train_loss, train_accuracy, val_loss, val_accuracy, num_epoch = fit(c)
+                    train_loss, train_accuracy, val_loss, val_accuracy, num_epoch = fit(c) 
                     
                     results = results + [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k]] + [train_loss, train_accuracy, val_loss, val_accuracy, num_epoch]
                     PATH = f"./best_models/model-{c}.pth"
