@@ -24,8 +24,8 @@ HP = {
     "hidden_layers": [[200, 100, 50], [200, 100], [200]],
     "activation_funcs": [nn.ReLU(),nn.Sigmoid()],
     "batch_size":128,
-    "num_epoch":30,
-    "patience":5
+    "num_epoch":100,
+    "patience":10
 }
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -54,9 +54,15 @@ class MyModel(nn.Module):
 def fit(config):
 
     patience = HP["patience"]
+    
+    epoch_took = 0
+    best_train_accuracy = 0
+    best_train_loss = 0
     best_val_acc = 0
-    best_model_at_epoch = 0
+    best_val_loss = 0
+    
     for epoch in range(HP["num_epoch"]):
+
         # Training
         model.train()
         accum_train_loss = 0
@@ -105,8 +111,11 @@ def fit(config):
         elif(val_accuracy <= best_val_acc):
             patience = patience - 1
         else:
-            best_model_at_epoch = epoch
+            epoch_took = epoch
             best_val_acc = val_accuracy
+            best_train_accuracy = train_accuracy
+            best_train_loss = train_loss
+            best_val_loss = val_loss
 
             save_dir = f"./best_models/"
             os.makedirs(save_dir, exist_ok=True)
@@ -115,7 +124,7 @@ def fit(config):
 
         print(f'Train Loss = {train_loss:.4f}\tTrain Accuracy = {train_accuracy:.4f}\tVal Loss = {val_loss:.4f}\tVal Accuracy: {val_accuracy:.4f}\tPatience: {patience}')
 
-    return train_loss, train_accuracy, val_loss, val_accuracy, best_model_at_epoch
+    return best_train_loss, best_train_accuracy, best_val_loss, best_val_acc, epoch_took
 
 def test(_model):
     # Compute Test Accuracy
@@ -160,9 +169,9 @@ if __name__ == "__main__":
     train_set, val_set = random_split(train_set, [train_set_length, val_set_length])
 
 
-    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True)
-    test_loader = DataLoader(test_set, batch_size=HP["batch_size"])
-    val_loader = DataLoader(val_set, batch_size=HP["batch_size"])
+    train_loader = DataLoader(train_set, batch_size=HP["batch_size"], shuffle=True,num_workers=8)
+    test_loader = DataLoader(test_set, batch_size=HP["batch_size"],num_workers=8)
+    val_loader = DataLoader(val_set, batch_size=HP["batch_size"],num_workers=8)
 
     results = []
     
@@ -179,11 +188,12 @@ if __name__ == "__main__":
 
                     train_loss, train_accuracy, val_loss, val_accuracy, num_epoch = fit(c) 
                     
-                    results = results + [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k]] + [train_loss, train_accuracy, val_loss, val_accuracy, num_epoch]
+                    model_result = [HP["neurons"][m],HP["hidden_layers"][i],HP["lr"][j],HP["activation_funcs"][k], train_loss, train_accuracy, val_loss, val_accuracy, num_epoch+1]
                     PATH = f"./best_models/model-{c}.pth"
                     model.load_state_dict(torch.load(PATH))
-                    results.append(test(model))
-                    print(results)
+                    model_result.append(test(model))
+                    print(model_result)
+                    results.append(model_result)
                     c=c+1
                 
     print(results)
