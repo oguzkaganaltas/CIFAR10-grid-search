@@ -199,7 +199,7 @@ if __name__ == "__main__":
     print(results)
     fields= ["neurons","hidden_layers","lr","activation_funcs","train_loss","train_accuracy","val_loss","val_accuracy","num_epoch","test_loss","test_accuracy"]
     import csv
-    with open('RESULTStest', 'w') as f:
+    with open('RESULTS', 'w') as f:
         write = csv.writer(f)
         write.writerow(fields)
         write.writerows(results)
