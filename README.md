@@ -3,6 +3,8 @@
 
 Oğuz Kağan Altaş 2385128
 
+If your environemnt is Windows, please remove the num_workers=8 from line 172,173,174. If you
+are using Linux, do not remove, it will make the training faster.
 
 # How to run
 
