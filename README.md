@@ -8,11 +8,11 @@ Oğuz Kağan Altaş 2385128
 
 ## Dependencies
 
-    `conda create -n pytorch python=3.9`
-    `conda activate pytorch`
-    `conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch`
-    `pip install matplotlib`
-    `pip install tqdm`
+    conda create -n pytorch python=3.9
+    conda activate pytorch
+    conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+    pip install matplotlib
+    pip install tqdm
 	
 ## How to run the Script
 
