@@ -4,7 +4,8 @@
 Oğuz Kağan Altaş 2385128
 
 If your environemnt is Windows, please remove the num_workers=8 from line 172,173,174. If you
-are using Linux, do not remove, it will make the training faster.
+are using Linux, do not remove, it will make the training faster. The cript will first train a model and validate it during training and after training completed
+it will take the best epoch model and test it with test data for each model. No spearate script to test.
 
 # How to run
 
